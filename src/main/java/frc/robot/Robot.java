@@ -354,11 +354,11 @@ ChassisSpeeds fieldspeeds = new ChassisSpeeds(0,0,0);
   public void autonomousPeriodic() {
     switch (m_autoSelected) {
       case kRedAuto:
-      if(m_Timer.hasElapsed(2) != true) {
+      /*if(m_Timer.hasElapsed(2) != true) {
         //shooterLeft.set(-0.7);
         //shooterRight.set(0.4);
-        m_ShooterLeftPID.setReference(-.6 * maxShootVelocity, SparkMax.ControlType.kVelocity);
-        m_ShooterRightPID.setReference(-.3 * maxShootVelocity, SparkMax.ControlType.kVelocity);
+        //m_ShooterLeftPID.setReference(-.6 * maxShootVelocity, SparkMax.ControlType.kVelocity);
+       // m_ShooterRightPID.setReference(-.3 * maxShootVelocity, SparkMax.ControlType.kVelocity);
       }
       else if(m_Timer.hasElapsed(5) != true) {
         intakeTop.set(1);
@@ -393,6 +393,7 @@ ChassisSpeeds fieldspeeds = new ChassisSpeeds(0,0,0);
           m_FrontLeftDrivePID.setReference(0, SparkMax.ControlType.kVelocity);
           m_FrontRightDrivePID.setReference(0, SparkMax.ControlType.kVelocity);
       }
+       
       break;
       case kBlueAuto:
       if(m_Timer.hasElapsed(2) != true) {
@@ -431,6 +432,7 @@ ChassisSpeeds fieldspeeds = new ChassisSpeeds(0,0,0);
           m_FrontRightDrivePID.setReference(0, SparkMax.ControlType.kVelocity);
       }
       break;
+       */
     }
   }
 
@@ -519,6 +521,8 @@ ChassisSpeeds fieldspeeds = new ChassisSpeeds(0,0,0);
      */
     
     //Set actual motor output values to drive
+
+    //angle and SpeedMeter not
     m_BackRightTurnPID.setReference(BackRightOptimized.angle.getDegrees(), SparkMax.ControlType.kPosition);
     m_FrontRightTurnPID.setReference(FrontRightOptimized.angle.getDegrees(), SparkMax.ControlType.kPosition);
     m_FrontLeftTurnPID.setReference(FrontLeftOptimized.angle.getDegrees(), SparkMax.ControlType.kPosition);
@@ -538,7 +542,7 @@ ChassisSpeeds fieldspeeds = new ChassisSpeeds(0,0,0);
 
    //output the current values to the SmartDashboard, by reading BackLeftDrive and BackLeftTurn
     //SmartDashboard.putNumber("P Gain", m_BackLeftDrivePID.getP());
-    SmartDashboard.putNumber("Set Chassis Speed", Math.sqrt(xAxis*xAxis + yAxis*yAxis));
+    /*SmartDashboard.putNumber("Set Chassis Speed", Math.sqrt(xAxis*xAxis + yAxis*yAxis));
     SmartDashboard.putNumber("Set Chassis Angle", Math.atan2(yAxis,xAxis));
     SmartDashboard.putNumber("BL S_Angle", BackLeftSwerve.angle.getDegrees()); 
     SmartDashboard.putNumber("BL S_Velocity", BackLeftSwerve.speedMetersPerSecond);
@@ -556,50 +560,51 @@ ChassisSpeeds fieldspeeds = new ChassisSpeeds(0,0,0);
     SmartDashboard.putNumber("FR S_Velocity", FrontRightSwerve.speedMetersPerSecond);
     SmartDashboard.putNumber("FR P_Angle", m_FrontRightTurnEncoder.getPosition());
     SmartDashboard.putNumber("FR P_Velocity", m_FrontRightDriveEncoder.getVelocity());
+     */
 
+     //Last years mechanisms 
 
-      
     //Run Intake
-    intakeBot.set((m_controller.getRightTriggerAxis() - m_controller.getLeftTriggerAxis())*0.7);
-    intakeTop.set(m_controller.getRightTriggerAxis() - m_controller.getLeftTriggerAxis());
+    //intakeBot.set((m_controller.getRightTriggerAxis() - m_controller.getLeftTriggerAxis())*0.7);
+    //intakeTop.set(m_controller.getRightTriggerAxis() - m_controller.getLeftTriggerAxis());
     
-    hangLeft.set(o_lyAxis*0.7);
-    hangRight.set(o_ryAxis*0.7);
+   // hangLeft.set(o_lyAxis*0.7);
+   // hangRight.set(o_ryAxis*0.7);
 
     //Set Shooter Speeds for Speaker or Amp Load
     if(o_controller.getXButton()){ //shooter for reverse
       //shooterLeft.set(.2);
       //shooterRight.set(-0.2);
-      m_ShooterLeftPID.setReference(0.1 * maxShootVelocity, SparkMax.ControlType.kVelocity);
-      m_ShooterRightPID.setReference(0.1 * maxShootVelocity, SparkMax.ControlType.kVelocity);
+      //m_ShooterLeftPID.setReference(0.1 * maxShootVelocity, SparkMax.ControlType.kVelocity);
+      //m_ShooterRightPID.setReference(0.1 * maxShootVelocity, SparkMax.ControlType.kVelocity);
     }
     else if(o_controller.getAButton()){  //shooter speaker
       //shooterLeft.set(-0.7);
       //shooterRight.set(0.4);  
-      m_ShooterLeftPID.setReference(-0.6 * maxShootVelocity, SparkMax.ControlType.kVelocity);
-      m_ShooterRightPID.setReference(-0.3 * maxShootVelocity, SparkMax.ControlType.kVelocity);  
+    //m_ShooterLeftPID.setReference(-0.6 * maxShootVelocity, SparkMax.ControlType.kVelocity);
+      //m_ShooterRightPID.setReference(-0.3 * maxShootVelocity, SparkMax.ControlType.kVelocity);  
     }
     else if(o_controller.getYButton()){  //slow shooter to load for amp/trap
       //shooterLeft.set(-0.2);`
       //shooterRight.set(0.2);
-      m_ShooterLeftPID.setReference(-0.2 * maxShootVelocity, SparkMax.ControlType.kVelocity);
-      m_ShooterRightPID.setReference(-0.2 * maxShootVelocity, SparkMax.ControlType.kVelocity);
+      //m_ShooterLeftPID.setReference(-0.2 * maxShootVelocity, SparkMax.ControlType.kVelocity);
+     // m_ShooterRightPID.setReference(-0.2 * maxShootVelocity, SparkMax.ControlType.kVelocity);
     }
     else{
      //shooterLeft.set(0.0);  //shooter stops
      //shooterRight.set(0.0);
-     m_ShooterLeftPID.setReference(0, SparkMax.ControlType.kVelocity);
-     m_ShooterRightPID.setReference(0, SparkMax.ControlType.kVelocity);
+    // m_ShooterLeftPID.setReference(0, SparkMax.ControlType.kVelocity);
+    // m_ShooterRightPID.setReference(0, SparkMax.ControlType.kVelocity);
     }
 
     if(o_controller.getRightBumper()){
-      m_ShooterAnglePID.setReference(traplocation, SparkMax.ControlType.kPosition);
+     // m_ShooterAnglePID.setReference(traplocation, SparkMax.ControlType.kPosition);
     }
     else if(o_controller.getBButton()){
-      m_ShooterAnglePID.setReference(traplocation-7, SparkMax.ControlType.kPosition);
+      //m_ShooterAnglePID.setReference(traplocation-7, SparkMax.ControlType.kPosition);
     }
     else {
-      m_ShooterAnglePID.setReference(0, SparkMax.ControlType.kPosition);
+    //  m_ShooterAnglePID.setReference(0, SparkMax.ControlType.kPosition);
     }
 
     if(m_controller.getAButton()){
@@ -636,4 +641,5 @@ ChassisSpeeds fieldspeeds = new ChassisSpeeds(0,0,0);
   /** This function is called periodically whilst in simulation. */
   @Override
   public void simulationPeriodic() {}
+}
 }
