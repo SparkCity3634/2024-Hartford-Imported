@@ -4,9 +4,6 @@
 
 package frc.robot;
 
-//commit
-
-//commit
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
@@ -20,7 +17,6 @@ import edu.wpi.first.wpilibj.drive.DifferentialDrive;
 import edu.wpi.first.wpilibj.motorcontrol.MotorControllerGroup;
 import edu.wpi.first.wpilibj.ADIS16470_IMU;
 import edu.wpi.first.wpilibj.SPI.Port;
-//import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.util.Units;
@@ -30,14 +26,14 @@ import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
-//import frc.robot.RobotContainer;
 import com.revrobotics.spark.SparkMax;
+import com.revrobotics.spark.SparkBase;
 import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
 import com.revrobotics.spark.config.SparkMaxConfig;
 import com.revrobotics.spark.SparkLowLevel.MotorType;
 import com.revrobotics.spark.SparkBase.PersistMode;
+import com.revrobotics.spark.SparkBase.ResetMode;
 import com.revrobotics.spark.SparkClosedLoopController;
-
 import com.revrobotics.RelativeEncoder;
 import java.lang.Math;
 import javax.xml.xpath.XPathExpression;
@@ -58,7 +54,7 @@ public class Robot extends TimedRobot {
   private Command m_autonomousCommand;
 
   //private RobotContainer m_robotContainer;
-    //These are the motor bindings needed for our drivetrain, used in the SwerveModule
+  //These are the motor bindings needed for our drivetrain, used in the SwerveModule
   
   private final SparkMax BackRightDrive = new SparkMax(41, MotorType.kBrushless);
   private final SparkMax BackRightTurn = new SparkMax(42, MotorType.kBrushless);
@@ -69,22 +65,17 @@ public class Robot extends TimedRobot {
   private final SparkMax BackLeftDrive = new SparkMax(31, MotorType.kBrushless);
   private final SparkMax BackLeftTurn = new SparkMax(32, MotorType.kBrushless);
   
-  private RelativeEncoder m_BackLeftDriveEncoder;
-  private RelativeEncoder m_BackRightDriveEncoder;
-  private RelativeEncoder m_FrontRightDriveEncoder;
-  private RelativeEncoder m_FrontLeftDriveEncoder;
+    //create SparkClosedLoopControllers to fix turn motors
 
-  private RelativeEncoder m_BackLeftTurnEncoder;
-  private RelativeEncoder m_BackRightTurnEncoder;
-  private RelativeEncoder m_FrontRightTurnEncoder;
-  private RelativeEncoder m_FrontLeftTurnEncoder;
-
+  private SparkClosedLoopController m_BackLeftDrivePID = BackLeftDrive.getClosedLoopController();
+  private SparkClosedLoopController m_BackRightDrivePID = BackRightDrive.getClosedLoopController();
+  private SparkClosedLoopController m_FrontRightDrivePID = FrontLeftDrive.getClosedLoopController();
+  private SparkClosedLoopController m_FrontLeftDrivePID = FrontRightDrive.getClosedLoopController();
+  private SparkClosedLoopController m_BackLeftTurnPID = BackLeftTurn.getClosedLoopController();
+  private SparkClosedLoopController m_BackRightTurnPID = BackRightTurn.getClosedLoopController();
+  private SparkClosedLoopController m_FrontRightTurnPID = FrontLeftTurn.getClosedLoopController();
+  private SparkClosedLoopController m_FrontLeftTurnPID = FrontRightTurn.getClosedLoopController();
   
-  private RelativeEncoder m_ShooterAngleEncoder;
-  private RelativeEncoder m_ShooterLeftEncoder;
-  private RelativeEncoder m_ShooterRightEncoder;
-
-
   //Bind CANcoders for Absolute Turn Encoding
   private static final String canBusName = "rio";
   private final CANcoder m_FrontRightTurnCancoder = new CANcoder(10, canBusName);
@@ -94,14 +85,6 @@ public class Robot extends TimedRobot {
   private final DutyCycleOut fwdOut = new DutyCycleOut(0);
 
   //Bind Module controllers
-  private final SparkMax intakeTop = new SparkMax(57, MotorType.kBrushless);
-  private final SparkMax intakeBot = new SparkMax(56, MotorType.kBrushless);
-  private final SparkMax hangLeft = new SparkMax(61, MotorType.kBrushless);
-  private final SparkMax hangRight = new SparkMax(60, MotorType.kBrushless);
-  private final SparkMax shooterLeft = new SparkMax(53, MotorType.kBrushless);
-  private final SparkMax shooterRight = new SparkMax(55, MotorType.kBrushless);
-  private final SparkMax shooterLift = new SparkMax(51, MotorType.kBrushless);
-
   
   XboxController o_controller = new XboxController(1);  
   XboxController m_controller = new XboxController(0);  
@@ -111,44 +94,12 @@ public class Robot extends TimedRobot {
   UsbCamera camera2;
   VideoSink server;
   Timer m_Timer = new Timer();
-//private final DifferentialDrive m_robotDrive = new DifferentialDrive(m_leftDrive, m_rightDrive);
 
-  //create SparkClosedLoopControllers to fix turn motors
-  private SparkClosedLoopController m_BackRightTurnPID;
-  private SparkClosedLoopController m_FrontRightTurnPID;
-  private SparkClosedLoopController m_FrontLeftTurnPID;
-  private SparkClosedLoopController m_BackLeftTurnPID;
-  
-  private SparkClosedLoopController m_BackLeftDrivePID = BackLeftDrive.getClosedLoopController();
-  private SparkClosedLoopController m_BackRightDrivePID = BackRightDrive.getClosedLoopController();
-  private SparkClosedLoopController m_FrontRightDrivePID = FrontLeftDrive.getClosedLoopController();
-  private SparkClosedLoopController m_FrontLeftDrivePID = FrontRightDrive.getClosedLoopController();
-
-  private SparkClosedLoopController m_ShooterAnglePID;
-  private SparkClosedLoopController m_ShooterLeftPID;
-  private SparkClosedLoopController m_ShooterRightPID;
-
-  public double ktP, ktI, ktD, ktIz, ktFF, ktMaxOutput, ktMinOutput, maxRPM, setTurn;
-  // Turn PID coefficients
-  ktP = 0.07; 
-  ktI = 0.0000;
-  ktD = 0.001;
-  ktIz = 0; 
-  ktFF = 0.003; 
-  ktMaxOutput = .9; 
-  ktMinOutput = -.9;
+  public double ktP, ktI, ktD, ktIz, ktFF, ktMaxOutput, ktMinOutput;
+  public double maxRPM, setTurn;
   public double kdP, kdI, kdD, kdIz, kdFF, kdMaxOutput, kdMinOutput;
-   // Drive Position PID coefficients (used for Autonomous Control)
-   kdP = 0.4; 
-   kdI = 0.00000;
-   kdD = 0.05; 
-   kdIz = 0; 
-   kdFF = 0.01; 
-   kdMaxOutput = 1; 
-   kdMinOutput = -1;
   public double anglekP, anglekI, anglekD, anglekIz, anglekFF, anglekMinInput, anglekMaxOutput;
   public double ksP, ksI, ksD, ksIz, ksFF, ksMaxOutput, ksMinOutput;
-  
   public double xAxis, yAxis, kYawRate, maxVel, maxYaw, o_lyAxis, o_ryAxis;
   public double k_posConv = .048; // linear meters traveled at wheel, per motor rotation
   public double k_velConv = .0008106; // linear meters per second (m/s) speed at wheel, convert from motor RPM
@@ -157,7 +108,14 @@ public class Robot extends TimedRobot {
   public double k_ShooterVelConv = .005319; // linear meters per second (m/s) speed at shooter, convert from motor RPM
   public double maxShootVelocity;
 
-  public double traplocation = -22; 
+// Drive Position PID coefficients (used for Autonomous Control)
+kdP = 0.4; 
+kdI = 0.00000;
+kdD = 0.05; 
+kdIz = 0; 
+kdFF = 0.01; 
+kdMaxOutput = 1; 
+kdMinOutput = -1;
 
 //Create SparkMax Config for Drive motors
 SparkMaxConfig config_Drive = new SparkMaxConfig();
@@ -171,7 +129,7 @@ config_Drive.encoder
     .velocityConversionFactor(1000)
     .setPositionConversionFactor(k_posConv)
     .setVelocityConversionFactor(k_velConv)
-   .setPosition(0);
+    .setPosition(0);
 config_Drive.closedLoop
     .feedbackSensor(FeedbackSensor.kPrimaryEncoder)
     .pid(kdP, kdI, kdD)
@@ -179,12 +137,22 @@ config_Drive.closedLoop
     .setFF(kdFF)
     .setOutputRange(kdMinOutput, kdMaxOutput);
 
-    //Create SparkMax Config for Turn motors
-    /**
-     * The PID Controller can be configured to use the analog sensor as its feedback
-     * device with the method SetFeedbackDevice() and passing the PID Controller
-     * the SparkMaxAnalogSensor object. 
-     */
+  //Create SparkMax Config for Turn motors
+   /**
+    * The PID Controller can be configured to use the analog sensor as its feedback
+    * device with the method SetFeedbackDevice() and passing the PID Controller
+    * the SparkMaxAnalogSensor object. 
+    */
+
+  // Turn PID coefficients
+  ktP = 0.07; 
+  ktI = 0.0000;
+  ktD = 0.001;
+  ktIz = 0; 
+  ktFF = 0.003; 
+  ktMaxOutput = .9; 
+  ktMinOutput = -.9;
+
 SparkMaxConfig config_Turn = new SparkMaxConfig();
 
 config_Turn
@@ -196,13 +164,13 @@ config_Turn.encoder
     .velocityConversionFactor(1000)
     .setPositionConversionFactor(k_turnConv)
     .setVelocityConversionFactor(k_turnConv)
-   .setPosition(0);
+    .setPosition(0);
 config_Turn.closedLoop
     .feedbackSensor(FeedbackSensor.kPrimaryEncoder)
-    .pid(kdP, kdI, kdD)
-    .setIZone(kdIz)
-    .setFF(kdFF)
-    .setOutputRange(kdMinOutput, kdMaxOutput)
+    .pid(ktP, ktI, ktD)
+    .setIZone(ktIz)
+    .setFF(ktFF)
+    .setOutputRange(ktMinOutput, ktMaxOutput)
     .setFeedbackDevice(m_BackRightTurnEncoder)
     .setPositionPIDWrappingEnabled(true)
     .setPositionPIDWrappingMinInput(0)
@@ -258,13 +226,12 @@ ChassisSpeeds fieldspeeds = new ChassisSpeeds(0,0,0);
     BackRightDrive.configure(config_Drive, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
     FrontLeftDrive.configure(config_Drive, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
     FrontRightDrive.configure(config_Drive, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
-
+    //Set Configuration for Turn motors
     BackLeftTurn.configure(config_Turn, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
     BackRightTurn.configure(config_Turn, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
     FrontLeftTurn.configure(config_Turn, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
     FrontRightTurn.configure(config_Turn, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
     
-   
     /* Configure CANcoder */
     //var toApply = new CANcoderConfiguration();
 
@@ -286,22 +253,12 @@ ChassisSpeeds fieldspeeds = new ChassisSpeeds(0,0,0);
     m_BackRightTurnCancoder.getPosition().setUpdateFrequency(100);
     m_BackRightTurnCancoder.getVelocity().setUpdateFrequency(100);
 
-    //declare turn sensors (NEO Relative encoders)
-    m_FrontRightTurnEncoder = FrontRightTurn.getEncoder();
-    m_BackRightTurnEncoder = BackRightTurn.getEncoder();
-    m_FrontLeftTurnEncoder = FrontLeftTurn.getEncoder();
-    m_BackLeftTurnEncoder = BackLeftTurn.getEncoder();
-        
-    m_BackRightTurnPID = BackRightTurn.getClosedLoopController();
-    m_FrontRightTurnPID = FrontRightTurn.getClosedLoopController();
-    m_FrontLeftTurnPID = FrontLeftTurn.getClosedLoopController();
-    m_BackLeftTurnPID = BackLeftTurn.getClosedLoopController();
-  
+     
     //Initialize RelativeEncoders to CANCoder Absolute Value
-    m_FrontRightTurnEncoder.setPosition(m_FrontRightTurnCancoder.getAbsolutePosition().getValue() * 360);//might want to add the .waitForUpdate() method to reduce latency?
-    m_FrontLeftTurnEncoder.setPosition(m_FrontLeftTurnCancoder.getAbsolutePosition().getValue() * 360);
-    m_BackLeftTurnEncoder.setPosition(m_BackLeftTurnCancoder.getAbsolutePosition().getValue() * 360);
-    m_BackRightTurnEncoder.setPosition(m_BackRightTurnCancoder.getAbsolutePosition().getValue() * 360);
+    FrontRightTurn.setPosition(m_FrontRightTurnCancoder.getAbsolutePosition().getValue() * 360);//might want to add the .waitForUpdate() method to reduce latency?
+    FrontLeftTurn.setPosition(m_FrontLeftTurnCancoder.getAbsolutePosition().getValue() * 360);
+    BackLeftTurn.setPosition(m_BackLeftTurnCancoder.getAbsolutePosition().getValue() * 360);
+    BackRightTurn.setPosition(m_BackRightTurnCancoder.getAbsolutePosition().getValue() * 360);
 
     maxVel = 4; // m/s linear velocity of drive wheel
     maxYaw = 2*Math.PI;   // max rad/s for chassis rotation rate
