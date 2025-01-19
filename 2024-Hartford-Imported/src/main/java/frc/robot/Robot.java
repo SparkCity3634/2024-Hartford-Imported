@@ -29,8 +29,6 @@ import edu.wpi.first.math.kinematics.SwerveModuleState;
 import com.revrobotics.spark.SparkMax;
 import com.revrobotics.spark.SparkBase;
 import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
-import com.revrobotics.spark.config.ClosedLoopConfig;
-import com.revrobotics.spark.config.ClosedLoopConfig.FeedbackSensor;
 import com.revrobotics.spark.config.SparkMaxConfig;
 import com.revrobotics.spark.SparkLowLevel.MotorType;
 import com.revrobotics.spark.SparkBase.PersistMode;
@@ -77,15 +75,15 @@ public class Robot extends TimedRobot {
   private SparkClosedLoopController m_FrontRightTurnPID = FrontLeftTurn.getClosedLoopController();
   private SparkClosedLoopController m_FrontLeftTurnPID = FrontRightTurn.getClosedLoopController();
   
-  //create Relencoders for Turn and Drive motors
-  private RelativeEncoder m_BackLeftTurnEncoder = BackLeftTurn.getEncoder();
-  private RelativeEncoder m_BackRightTurnEncoder = BackRightTurn.getEncoder();
-  private RelativeEncoder m_FrontRightTurnEncoder = FrontRightTurn.getEncoder();
-  private RelativeEncoder m_FrontLeftTurnEncoder = FrontLeftTurn.getEncoder();
-  private RelativeEncoder m_BackLeftDriveEncoder = BackLeftDrive.getEncoder();
-  private RelativeEncoder m_BackRightDriveEncoder = BackRightDrive.getEncoder();
-  private RelativeEncoder m_FrontRightDriveEncoder = FrontRightDrive.getEncoder();
-  private RelativeEncoder m_FrontLeftDriveEncoder = FrontLeftDrive.getEncoder();
+  //create Encoder for Relative Turn Encoding
+  private RelativeEncoder m_BackRightTurnEncoder = new BackRightTurn.getEncoder();
+  private RelativeEncoder m_FrontRightTurnEncoder = new FrontRightTurn.getEncoder();
+  private RelativeEncoder m_FrontLeftTurnEncoder = new FrontLeftTurn.getEncoder();
+  private RelativeEncoder m_BackLeftTurnEncoder = new BackLeftTurn.getEncoder();
+  private RelativeEncoder m_BackLeftDriveEncoder = new BackLeftDrive.getEncoder();
+  private RelativeEncoder m_BackRightDriveEncoder = new BackRightDrive.getEncoder();
+  private RelativeEncoder m_FrontLeftDriveEncoder = new FrontLeftDrive.getEncoder();
+  private RelativeEncoder m_FrontRightDriveEncoder = new FrontRightDrive.getEncoder();
 
   //Bind CANcoders for Absolute Turn Encoding
   private static final String canBusName = "rio";
@@ -93,7 +91,7 @@ public class Robot extends TimedRobot {
   private final CANcoder m_FrontLeftTurnCancoder = new CANcoder(20, canBusName);
   private final CANcoder m_BackLeftTurnCancoder = new CANcoder(30, canBusName);
   private final CANcoder m_BackRightTurnCancoder = new CANcoder(40, canBusName);
-  //private final DutyCycleOut fwdOut = new DutyCycleOut(0);
+  private final DutyCycleOut fwdOut = new DutyCycleOut(0);
 
   //Bind Module controllers
   
@@ -180,18 +178,21 @@ kdMaxOutput = 1;
 kdMinOutput = -1;
 
 config_Drive
-    .smartCurrentLimit(40)
+    .setSmartCurrentLimit(40)
     .inverted(true)
     .idleMode(IdleMode.kCoast);
 config_Drive.encoder
-    .positionConversionFactor(k_posConv)
-    .velocityConversionFactor(k_velConv);
+    .positionConversionFactor(1000)
+    .velocityConversionFactor(1000)
+    .setPositionConversionFactor(k_posConv)
+    .setVelocityConversionFactor(k_velConv)
+    .setPosition(0);
 config_Drive.closedLoop
     .feedbackSensor(FeedbackSensor.kPrimaryEncoder)
     .pid(kdP, kdI, kdD)
-    .iZone(kdIz)
-    .velocityFF(kdFF)
-    .outputRange(kdMinOutput, kdMaxOutput);
+    .setIZone(kdIz)
+    .setFF(kdFF)
+    .setOutputRange(kdMinOutput, kdMaxOutput);
 
   //Create SparkMax Config for Turn motors
    /**
@@ -211,21 +212,23 @@ config_Drive.closedLoop
   ktMinOutput = -.9;
 
 config_Turn
-    .smartCurrentLimit(40)
+    .setSmartCurrentLimit(40)
     .inverted(true)
     .idleMode(IdleMode.kCoast);
 config_Turn.encoder
     .positionConversionFactor(k_turnConv)
-    .velocityConversionFactor(k_turnConv);
+    .velocityConversionFactor(k_turnConv)
+    .setPosition(0);
 config_Turn.closedLoop
     .feedbackSensor(FeedbackSensor.kPrimaryEncoder)
     .pid(ktP, ktI, ktD)
-    .iZone(ktIz)
-    .velocityFF(ktFF)
-    .outputRange(ktMinOutput, ktMaxOutput)
-    .positionWrappingEnabled(true)
-    .positionWrappingMinInput(0)
-    .positionWrappingMaxInput(360);
+    .setIZone(ktIz)
+    .setFF(ktFF)
+    .setOutputRange(ktMinOutput, ktMaxOutput)
+    .setFeedbackDevice(m_BackRightTurnEncoder)
+    .setPositionPIDWrappingEnabled(true)
+    .setPositionPIDWrappingMinInput(0)
+    .setPositionPIDWrappingMaxInput(360);
 
     //Set Configuration for Drive motors
     BackLeftDrive.configure(config_Drive, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
@@ -261,10 +264,10 @@ config_Turn.closedLoop
 
      
     //Initialize RelativeEncoders to CANCoder Absolute Value
-    FrontRightTurn.setPosition(m_FrontRightTurnCancoder.getAbsolutePosition().getValue().toDegrees());//might want to add the .waitForUpdate() method to reduce latency?
-    FrontLeftTurn.setPosition(m_FrontLeftTurnCancoder.getAbsolutePosition().getValue().toDegrees());
-    BackLeftTurn.setPosition(m_BackLeftTurnCancoder.getAbsolutePosition().getValue().toDegrees());
-    BackRightTurn.setPosition(m_BackRightTurnCancoder.getAbsolutePosition().getValue().toDegrees());
+    m_FrontRightTurnEncoder.setPosition(m_FrontRightTurnCancoder.getAbsolutePosition().getValue().toDegrees());//might want to add the .waitForUpdate() method to reduce latency?
+    m_FrontLeftTurnEncoder.setPosition(m_FrontLeftTurnCancoder.getAbsolutePosition().getValue().toDegrees());
+    m_BackLeftTurnEncoder.setPosition(m_BackLeftTurnCancoder.getAbsolutePosition().getValue().toDegrees());
+    m_BackRightTurnEncoder.setPosition(m_BackRightTurnCancoder.getAbsolutePosition().getValue().toDegrees());
 
     maxVel = 4; // m/s linear velocity of drive wheel
     maxYaw = 2*Math.PI;   // max rad/s for chassis rotation rate
@@ -546,7 +549,29 @@ config_Turn.closedLoop
     FrontLeftDrive.set(0);
     */
 
-      //Last years mechanisms 
+   //output the current values to the SmartDashboard, by reading BackLeftDrive and BackLeftTurn
+    //SmartDashboard.putNumber("P Gain", m_BackLeftDrivePID.getP());
+    /*SmartDashboard.putNumber("Set Chassis Speed", Math.sqrt(xAxis*xAxis + yAxis*yAxis));
+    SmartDashboard.putNumber("Set Chassis Angle", Math.atan2(yAxis,xAxis));
+    SmartDashboard.putNumber("BL S_Angle", BackLeftSwerve.angle.getDegrees()); 
+    SmartDashboard.putNumber("BL S_Velocity", BackLeftSwerve.speedMetersPerSecond);
+    SmartDashboard.putNumber("BL P_Angle", m_BackLeftTurnEncoder.getPosition());
+    SmartDashboard.putNumber("BL P_Velocity", m_BackLeftDriveEncoder.getVelocity());
+    SmartDashboard.putNumber("BR S_Angle", BackRightSwerve.angle.getDegrees());
+    SmartDashboard.putNumber("BR S_Velocity", BackRightSwerve.speedMetersPerSecond);
+    SmartDashboard.putNumber("BR P_Angle", m_FrontRightTurnEncoder.getPosition());
+    SmartDashboard.putNumber("BR P_Velocity", m_BackRightDriveEncoder.getVelocity());
+    SmartDashboard.putNumber("FL S_Angle", FrontLeftSwerve.angle.getDegrees());
+    SmartDashboard.putNumber("FL S_Velocity", FrontLeftSwerve.speedMetersPerSecond);
+    SmartDashboard.putNumber("FL P_Angle", m_FrontRightTurnEncoder.getPosition());
+    SmartDashboard.putNumber("FL P_Velocity", m_FrontLeftDriveEncoder.getVelocity());
+    SmartDashboard.putNumber("FR S_Angle", FrontRightSwerve.angle.getDegrees());
+    SmartDashboard.putNumber("FR S_Velocity", FrontRightSwerve.speedMetersPerSecond);
+    SmartDashboard.putNumber("FR P_Angle", m_FrontRightTurnEncoder.getPosition());
+    SmartDashboard.putNumber("FR P_Velocity", m_FrontRightDriveEncoder.getVelocity());
+     */
+
+     //Last years mechanisms 
 
     //Run Intake
     //intakeBot.set((m_controller.getRightTriggerAxis() - m_controller.getLeftTriggerAxis())*0.7);
