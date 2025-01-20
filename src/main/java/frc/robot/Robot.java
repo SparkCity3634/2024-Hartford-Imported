@@ -13,13 +13,9 @@ import edu.wpi.first.cscore.VideoSource.ConnectionStrategy;
 import edu.wpi.first.cameraserver.CameraServer;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.XboxController;
-import edu.wpi.first.wpilibj.drive.DifferentialDrive;
-import edu.wpi.first.wpilibj.motorcontrol.MotorControllerGroup;
 import edu.wpi.first.wpilibj.ADIS16470_IMU;
-import edu.wpi.first.wpilibj.SPI.Port;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.math.MathUtil;
-import edu.wpi.first.math.util.Units;
 import edu.wpi.first.math.filter.SlewRateLimiter;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
@@ -27,9 +23,7 @@ import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
 import com.revrobotics.spark.SparkMax;
-import com.revrobotics.spark.SparkBase;
 import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
-import com.revrobotics.spark.config.ClosedLoopConfig;
 import com.revrobotics.spark.config.ClosedLoopConfig.FeedbackSensor;
 import com.revrobotics.spark.config.SparkMaxConfig;
 import com.revrobotics.spark.SparkLowLevel.MotorType;
@@ -38,9 +32,6 @@ import com.revrobotics.spark.SparkBase.ResetMode;
 import com.revrobotics.spark.SparkClosedLoopController;
 import com.revrobotics.RelativeEncoder;
 import java.lang.Math;
-import javax.xml.xpath.XPathExpression;
-import com.ctre.phoenix6.configs.CANcoderConfiguration;
-import com.ctre.phoenix6.controls.DutyCycleOut;
 import com.ctre.phoenix6.hardware.CANcoder;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 
@@ -261,10 +252,10 @@ config_Turn.closedLoop
 
      
     //Initialize RelativeEncoders to CANCoder Absolute Value
-    FrontRightTurn.setPosition(m_FrontRightTurnCancoder.getAbsolutePosition().getValue().toDegrees());//might want to add the .waitForUpdate() method to reduce latency?
-    FrontLeftTurn.setPosition(m_FrontLeftTurnCancoder.getAbsolutePosition().getValue().toDegrees());
-    BackLeftTurn.setPosition(m_BackLeftTurnCancoder.getAbsolutePosition().getValue().toDegrees());
-    BackRightTurn.setPosition(m_BackRightTurnCancoder.getAbsolutePosition().getValue().toDegrees());
+    m_FrontRightTurnEncoder.setPosition(m_FrontRightTurnCancoder.getAbsolutePosition().getValueAsDouble());//might want to add the .waitForUpdate() method to reduce latency?
+    m_FrontLeftTurnEncoder.setPosition(m_FrontLeftTurnCancoder.getAbsolutePosition().getValueAsDouble());
+    m_BackLeftTurnEncoder.setPosition(m_BackLeftTurnCancoder.getAbsolutePosition().getValueAsDouble());
+    m_BackRightTurnEncoder.setPosition(m_BackRightTurnCancoder.getAbsolutePosition().getValueAsDouble());
 
     maxVel = 4; // m/s linear velocity of drive wheel
     maxYaw = 2*Math.PI;   // max rad/s for chassis rotation rate
@@ -314,12 +305,7 @@ config_Turn.closedLoop
        * StatusSignalValues also have the toString method implemented, to provide
        * a useful print of the signal.
        */
-      /*m_FrontRightTurnEncoder.setPosition(m_FrontRightTurnCancoder.getPosition().getValue() * 360);//might want to add the .waitForUpdate() method to reduce latency?
-      m_FrontLeftTurnEncoder.setPosition(m_FrontLeftTurnCancoder.getPosition().getValue() * 360);
-      m_BackLeftTurnEncoder.setPosition(m_BackLeftTurnCancoder.getPosition().getValue() * 360);
-      m_BackRightTurnEncoder.setPosition(m_BackRightTurnCancoder.getPosition().getValue() * 360);*/
-
-
+      
   }
 
   /** This function is called once each time the robot enters Disabled mode. */
