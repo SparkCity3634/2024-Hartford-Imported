@@ -68,15 +68,17 @@ public class Robot extends TimedRobot {
   private SparkClosedLoopController m_FrontRightTurnPID = FrontLeftTurn.getClosedLoopController();
   private SparkClosedLoopController m_FrontLeftTurnPID = FrontRightTurn.getClosedLoopController();
   
-  //create Relencoders for Turn and Drive motors
+  //create Relative encoders (from built-in motor encoders) for Turn and Drive motors
   private RelativeEncoder m_BackLeftTurnEncoder = BackLeftTurn.getEncoder();
   private RelativeEncoder m_BackRightTurnEncoder = BackRightTurn.getEncoder();
   private RelativeEncoder m_FrontRightTurnEncoder = FrontRightTurn.getEncoder();
   private RelativeEncoder m_FrontLeftTurnEncoder = FrontLeftTurn.getEncoder();
-  private RelativeEncoder m_BackLeftDriveEncoder = BackLeftDrive.getEncoder();
-  private RelativeEncoder m_BackRightDriveEncoder = BackRightDrive.getEncoder();
-  private RelativeEncoder m_FrontRightDriveEncoder = FrontRightDrive.getEncoder();
-  private RelativeEncoder m_FrontLeftDriveEncoder = FrontLeftDrive.getEncoder();
+  
+  //Drive Encoders are not used in this code, but are included for reference
+  //private RelativeEncoder m_BackLeftDriveEncoder = BackLeftDrive.getEncoder();
+  //private RelativeEncoder m_BackRightDriveEncoder = BackRightDrive.getEncoder();
+  //private RelativeEncoder m_FrontRightDriveEncoder = FrontRightDrive.getEncoder();
+  //private RelativeEncoder m_FrontLeftDriveEncoder = FrontLeftDrive.getEncoder();
 
   //Bind CANcoders for Absolute Turn Encoding
   private static final String canBusName = "rio";
@@ -267,11 +269,19 @@ config_Turn.closedLoop
     SwerveModuleState BackRightSwerve = moduleStates[1];
     SwerveModuleState FrontLeftSwerve = moduleStates[2];
     SwerveModuleState FrontRightSwerve = moduleStates[3];
-    SwerveModuleState BackLeftOptimized = SwerveModuleState.optimize(BackLeftSwerve, Rotation2d.fromDegrees(MathUtil.inputModulus(m_BackLeftTurnEncoder.getPosition(),0 , 360)));
-    SwerveModuleState BackRightOptimized = SwerveModuleState.optimize(BackRightSwerve, Rotation2d.fromDegrees(MathUtil.inputModulus(m_BackRightTurnEncoder.getPosition(),0 , 360)));
-    SwerveModuleState FrontLeftOptimized = SwerveModuleState.optimize(FrontLeftSwerve, Rotation2d.fromDegrees(MathUtil.inputModulus(m_FrontLeftTurnEncoder.getPosition(),0 , 360)));
-    SwerveModuleState FrontRightOptimized = SwerveModuleState.optimize(FrontRightSwerve, Rotation2d.fromDegrees(MathUtil.inputModulus(m_FrontRightTurnEncoder.getPosition(),0 , 360)));
+    
+    //Optimize Swerve Module States using Deprecated Static Method
+    //SwerveModuleState BackLeftOptimized = SwerveModuleState.optimize(BackLeftSwerve, Rotation2d.fromDegrees(MathUtil.inputModulus(m_BackLeftTurnEncoder.getPosition(),0 , 360)));
+    //SwerveModuleState BackRightOptimized = SwerveModuleState.optimize(BackRightSwerve, Rotation2d.fromDegrees(MathUtil.inputModulus(m_BackRightTurnEncoder.getPosition(),0 , 360)));
+    //SwerveModuleState FrontLeftOptimized = SwerveModuleState.optimize(FrontLeftSwerve, Rotation2d.fromDegrees(MathUtil.inputModulus(m_FrontLeftTurnEncoder.getPosition(),0 , 360)));
+    //SwerveModuleState FrontRightOptimized = SwerveModuleState.optimize(FrontRightSwerve, Rotation2d.fromDegrees(MathUtil.inputModulus(m_FrontRightTurnEncoder.getPosition(),0 , 360)));
    
+    //Optimize Swerve Module States using Instance Method
+    BackLeftSwerve.optimize(Rotation2d.fromDegrees(m_BackLeftTurnEncoder.getPosition()));
+    BackRightSwerve.optimize(Rotation2d.fromDegrees(m_BackRightTurnEncoder.getPosition()));
+    FrontLeftSwerve.optimize(Rotation2d.fromDegrees(m_FrontLeftTurnEncoder.getPosition()));
+    FrontRightSwerve.optimize(Rotation2d.fromDegrees(m_FrontRightTurnEncoder.getPosition()));
+    
     m_gyro.reset();
     
     // display PID coefficients on SmartDashboard
@@ -303,7 +313,8 @@ config_Turn.closedLoop
        * getPosition automatically calls refresh(), no need to manually refresh.
        * 
        * StatusSignalValues also have the toString method implemented, to provide
-       * a useful print of the signal.
+       * a useful print of the signal.  Need to use the getValueAsDouble() method 
+       * to convert to double for use in other methods.
        */
       
   }
@@ -437,8 +448,8 @@ config_Turn.closedLoop
     if (m_autonomousCommand != null) {
       m_autonomousCommand.cancel();
     }
+    
     m_gyro.reset();
-    //Reinitialize Velocity drive mode for teleop with correct PIDs
     
     maxVel = 4; // m/s linear velocity of drive wheel
     maxYaw = 2*Math.PI;   // max rad/s for chassis rotation rate
@@ -482,7 +493,7 @@ config_Turn.closedLoop
       otherwise Drive is Field Centric
       */
 
-      if(m_controller.getLeftBumper()){
+      if(m_controller.getLeftBumperButton()){
         fieldspeeds =  new ChassisSpeeds(xAxis, yAxis, rot);
       }
       else {
@@ -493,10 +504,19 @@ config_Turn.closedLoop
     SwerveModuleState BackRightSwerve = moduleStates[1];
     SwerveModuleState FrontLeftSwerve = moduleStates[2];
     SwerveModuleState FrontRightSwerve = moduleStates[3];
-    var BackLeftOptimized = SwerveModuleState.optimize(BackLeftSwerve, Rotation2d.fromDegrees(m_BackLeftTurnEncoder.getPosition()));
-    var BackRightOptimized = SwerveModuleState.optimize(BackRightSwerve, Rotation2d.fromDegrees(m_BackRightTurnEncoder.getPosition()));
-    var FrontLeftOptimized = SwerveModuleState.optimize(FrontLeftSwerve, Rotation2d.fromDegrees(m_FrontLeftTurnEncoder.getPosition()));
-    var FrontRightOptimized = SwerveModuleState.optimize(FrontRightSwerve, Rotation2d.fromDegrees(m_FrontRightTurnEncoder.getPosition()));
+    
+    //Optimize Swerve Module States using Deprecated Static Method
+    //var BackLeftOptimized = SwerveModuleState.optimize(BackLeftSwerve, Rotation2d.fromDegrees(m_BackLeftTurnEncoder.getPosition()));
+    //var BackRightOptimized = SwerveModuleState.optimize(BackRightSwerve, Rotation2d.fromDegrees(m_BackRightTurnEncoder.getPosition()));
+    //var FrontLeftOptimized = SwerveModuleState.optimize(FrontLeftSwerve, Rotation2d.fromDegrees(m_FrontLeftTurnEncoder.getPosition()));
+    //var FrontRightOptimized = SwerveModuleState.optimize(FrontRightSwerve, Rotation2d.fromDegrees(m_FrontRightTurnEncoder.getPosition()));
+    
+    //Optimize Swerve Module States using Instance Method
+    BackLeftSwerve.optimize(Rotation2d.fromDegrees(m_BackLeftTurnEncoder.getPosition()));
+    BackRightSwerve.optimize(Rotation2d.fromDegrees(m_BackRightTurnEncoder.getPosition()));
+    FrontLeftSwerve.optimize(Rotation2d.fromDegrees(m_FrontLeftTurnEncoder.getPosition()));
+    FrontRightSwerve.optimize(Rotation2d.fromDegrees(m_FrontRightTurnEncoder.getPosition()));
+    
     /**
      * PIDController objects are commanded to a set point using the 
      * SetReference() method and the reference value of the optimized swerve mfodule states
@@ -515,14 +535,14 @@ config_Turn.closedLoop
     //Set actual motor output values to drive
 
     //angle and SpeedMeter not
-    m_BackRightTurnPID.setReference(BackRightOptimized.angle.getDegrees(), SparkMax.ControlType.kPosition);
-    m_FrontRightTurnPID.setReference(FrontRightOptimized.angle.getDegrees(), SparkMax.ControlType.kPosition);
-    m_FrontLeftTurnPID.setReference(FrontLeftOptimized.angle.getDegrees(), SparkMax.ControlType.kPosition);
-    m_BackLeftTurnPID.setReference(BackLeftOptimized.angle.getDegrees(), SparkMax.ControlType.kPosition);  
-    m_BackLeftDrivePID.setReference(BackLeftOptimized.speedMetersPerSecond, SparkMax.ControlType.kVelocity);
-    m_BackRightDrivePID.setReference(BackRightOptimized.speedMetersPerSecond, SparkMax.ControlType.kVelocity);
-    m_FrontLeftDrivePID.setReference(FrontLeftOptimized.speedMetersPerSecond, SparkMax.ControlType.kVelocity);
-    m_FrontRightDrivePID.setReference(FrontRightOptimized.speedMetersPerSecond, SparkMax.ControlType.kVelocity);
+    m_BackRightTurnPID.setReference(BackRightSwerve.angle.getDegrees(), SparkMax.ControlType.kPosition);
+    m_FrontRightTurnPID.setReference(FrontRightSwerve.angle.getDegrees(), SparkMax.ControlType.kPosition);
+    m_FrontLeftTurnPID.setReference(FrontLeftSwerve.angle.getDegrees(), SparkMax.ControlType.kPosition);
+    m_BackLeftTurnPID.setReference(BackLeftSwerve.angle.getDegrees(), SparkMax.ControlType.kPosition);  
+    m_BackLeftDrivePID.setReference(BackLeftSwerve.speedMetersPerSecond, SparkMax.ControlType.kVelocity);
+    m_BackRightDrivePID.setReference(BackRightSwerve.speedMetersPerSecond, SparkMax.ControlType.kVelocity);
+    m_FrontLeftDrivePID.setReference(FrontLeftSwerve.speedMetersPerSecond, SparkMax.ControlType.kVelocity);
+    m_FrontRightDrivePID.setReference(FrontRightSwerve.speedMetersPerSecond, SparkMax.ControlType.kVelocity);
         
         
     /* //TURN DRIVE MOTORS OFF
@@ -567,7 +587,7 @@ config_Turn.closedLoop
     // m_ShooterRightPID.setReference(0, SparkMax.ControlType.kVelocity);
     }
 
-    if(o_controller.getRightBumper()){
+    if(o_controller.getRightBumperButton()){
      // m_ShooterAnglePID.setReference(traplocation, SparkMax.ControlType.kPosition);
     }
     else if(o_controller.getBButton()){
@@ -581,7 +601,7 @@ config_Turn.closedLoop
       m_gyro.reset();
     }
 
-    if(m_controller.getRightBumper()){
+    if(m_controller.getRightBumperButton()){
       maxVel = 1.5;
     }
     else{
