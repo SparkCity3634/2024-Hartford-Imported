@@ -13,9 +13,13 @@ import edu.wpi.first.cscore.VideoSource.ConnectionStrategy;
 import edu.wpi.first.cameraserver.CameraServer;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.XboxController;
+import edu.wpi.first.wpilibj.drive.DifferentialDrive;
+import edu.wpi.first.wpilibj.motorcontrol.MotorControllerGroup;
 import edu.wpi.first.wpilibj.ADIS16470_IMU;
+import edu.wpi.first.wpilibj.SPI.Port;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.math.MathUtil;
+import edu.wpi.first.math.util.Units;
 import edu.wpi.first.math.filter.SlewRateLimiter;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Translation2d;
@@ -23,8 +27,8 @@ import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
 import com.revrobotics.spark.SparkMax;
+import com.revrobotics.spark.SparkBase;
 import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
-import com.revrobotics.spark.config.ClosedLoopConfig.FeedbackSensor;
 import com.revrobotics.spark.config.SparkMaxConfig;
 import com.revrobotics.spark.SparkLowLevel.MotorType;
 import com.revrobotics.spark.SparkBase.PersistMode;
@@ -32,6 +36,9 @@ import com.revrobotics.spark.SparkBase.ResetMode;
 import com.revrobotics.spark.SparkClosedLoopController;
 import com.revrobotics.RelativeEncoder;
 import java.lang.Math;
+import javax.xml.xpath.XPathExpression;
+import com.ctre.phoenix6.configs.CANcoderConfiguration;
+import com.ctre.phoenix6.controls.DutyCycleOut;
 import com.ctre.phoenix6.hardware.CANcoder;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 
@@ -68,17 +75,15 @@ public class Robot extends TimedRobot {
   private SparkClosedLoopController m_FrontRightTurnPID = FrontLeftTurn.getClosedLoopController();
   private SparkClosedLoopController m_FrontLeftTurnPID = FrontRightTurn.getClosedLoopController();
   
-  //create Relative encoders (from built-in motor encoders) for Turn and Drive motors
-  private RelativeEncoder m_BackLeftTurnEncoder = BackLeftTurn.getEncoder();
-  private RelativeEncoder m_BackRightTurnEncoder = BackRightTurn.getEncoder();
-  private RelativeEncoder m_FrontRightTurnEncoder = FrontRightTurn.getEncoder();
-  private RelativeEncoder m_FrontLeftTurnEncoder = FrontLeftTurn.getEncoder();
-  
-  //Drive Encoders are not used in this code, but are included for reference
-  //private RelativeEncoder m_BackLeftDriveEncoder = BackLeftDrive.getEncoder();
-  //private RelativeEncoder m_BackRightDriveEncoder = BackRightDrive.getEncoder();
-  //private RelativeEncoder m_FrontRightDriveEncoder = FrontRightDrive.getEncoder();
-  //private RelativeEncoder m_FrontLeftDriveEncoder = FrontLeftDrive.getEncoder();
+  //create Encoder for Relative Turn Encoding
+  private RelativeEncoder m_BackRightTurnEncoder = new BackRightTurn.getEncoder();
+  private RelativeEncoder m_FrontRightTurnEncoder = new FrontRightTurn.getEncoder();
+  private RelativeEncoder m_FrontLeftTurnEncoder = new FrontLeftTurn.getEncoder();
+  private RelativeEncoder m_BackLeftTurnEncoder = new BackLeftTurn.getEncoder();
+  private RelativeEncoder m_BackLeftDriveEncoder = new BackLeftDrive.getEncoder();
+  private RelativeEncoder m_BackRightDriveEncoder = new BackRightDrive.getEncoder();
+  private RelativeEncoder m_FrontLeftDriveEncoder = new FrontLeftDrive.getEncoder();
+  private RelativeEncoder m_FrontRightDriveEncoder = new FrontRightDrive.getEncoder();
 
   //Bind CANcoders for Absolute Turn Encoding
   private static final String canBusName = "rio";
@@ -86,7 +91,7 @@ public class Robot extends TimedRobot {
   private final CANcoder m_FrontLeftTurnCancoder = new CANcoder(20, canBusName);
   private final CANcoder m_BackLeftTurnCancoder = new CANcoder(30, canBusName);
   private final CANcoder m_BackRightTurnCancoder = new CANcoder(40, canBusName);
-  //private final DutyCycleOut fwdOut = new DutyCycleOut(0);
+  private final DutyCycleOut fwdOut = new DutyCycleOut(0);
 
   //Bind Module controllers
   
@@ -173,18 +178,21 @@ kdMaxOutput = 1;
 kdMinOutput = -1;
 
 config_Drive
-    .smartCurrentLimit(40)
+    .setSmartCurrentLimit(40)
     .inverted(true)
     .idleMode(IdleMode.kCoast);
 config_Drive.encoder
-    .positionConversionFactor(k_posConv)
-    .velocityConversionFactor(k_velConv);
+    .positionConversionFactor(1000)
+    .velocityConversionFactor(1000)
+    .setPositionConversionFactor(k_posConv)
+    .setVelocityConversionFactor(k_velConv)
+    .setPosition(0);
 config_Drive.closedLoop
     .feedbackSensor(FeedbackSensor.kPrimaryEncoder)
     .pid(kdP, kdI, kdD)
-    .iZone(kdIz)
-    .velocityFF(kdFF)
-    .outputRange(kdMinOutput, kdMaxOutput);
+    .setIZone(kdIz)
+    .setFF(kdFF)
+    .setOutputRange(kdMinOutput, kdMaxOutput);
 
   //Create SparkMax Config for Turn motors
    /**
@@ -204,21 +212,23 @@ config_Drive.closedLoop
   ktMinOutput = -.9;
 
 config_Turn
-    .smartCurrentLimit(40)
+    .setSmartCurrentLimit(40)
     .inverted(true)
     .idleMode(IdleMode.kCoast);
 config_Turn.encoder
     .positionConversionFactor(k_turnConv)
-    .velocityConversionFactor(k_turnConv);
+    .velocityConversionFactor(k_turnConv)
+    .setPosition(0);
 config_Turn.closedLoop
     .feedbackSensor(FeedbackSensor.kPrimaryEncoder)
     .pid(ktP, ktI, ktD)
-    .iZone(ktIz)
-    .velocityFF(ktFF)
-    .outputRange(ktMinOutput, ktMaxOutput)
-    .positionWrappingEnabled(true)
-    .positionWrappingMinInput(0)
-    .positionWrappingMaxInput(360);
+    .setIZone(ktIz)
+    .setFF(ktFF)
+    .setOutputRange(ktMinOutput, ktMaxOutput)
+    .setFeedbackDevice(m_BackRightTurnEncoder)
+    .setPositionPIDWrappingEnabled(true)
+    .setPositionPIDWrappingMinInput(0)
+    .setPositionPIDWrappingMaxInput(360);
 
     //Set Configuration for Drive motors
     BackLeftDrive.configure(config_Drive, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
@@ -254,10 +264,10 @@ config_Turn.closedLoop
 
      
     //Initialize RelativeEncoders to CANCoder Absolute Value
-    m_FrontRightTurnEncoder.setPosition(m_FrontRightTurnCancoder.getAbsolutePosition().getValueAsDouble());//might want to add the .waitForUpdate() method to reduce latency?
-    m_FrontLeftTurnEncoder.setPosition(m_FrontLeftTurnCancoder.getAbsolutePosition().getValueAsDouble());
-    m_BackLeftTurnEncoder.setPosition(m_BackLeftTurnCancoder.getAbsolutePosition().getValueAsDouble());
-    m_BackRightTurnEncoder.setPosition(m_BackRightTurnCancoder.getAbsolutePosition().getValueAsDouble());
+    m_FrontRightTurnEncoder.setPosition(m_FrontRightTurnCancoder.getAbsolutePosition().getValue().toDegrees());//might want to add the .waitForUpdate() method to reduce latency?
+    m_FrontLeftTurnEncoder.setPosition(m_FrontLeftTurnCancoder.getAbsolutePosition().getValue().toDegrees());
+    m_BackLeftTurnEncoder.setPosition(m_BackLeftTurnCancoder.getAbsolutePosition().getValue().toDegrees());
+    m_BackRightTurnEncoder.setPosition(m_BackRightTurnCancoder.getAbsolutePosition().getValue().toDegrees());
 
     maxVel = 4; // m/s linear velocity of drive wheel
     maxYaw = 2*Math.PI;   // max rad/s for chassis rotation rate
@@ -269,19 +279,11 @@ config_Turn.closedLoop
     SwerveModuleState BackRightSwerve = moduleStates[1];
     SwerveModuleState FrontLeftSwerve = moduleStates[2];
     SwerveModuleState FrontRightSwerve = moduleStates[3];
-    
-    //Optimize Swerve Module States using Deprecated Static Method
-    //SwerveModuleState BackLeftOptimized = SwerveModuleState.optimize(BackLeftSwerve, Rotation2d.fromDegrees(MathUtil.inputModulus(m_BackLeftTurnEncoder.getPosition(),0 , 360)));
-    //SwerveModuleState BackRightOptimized = SwerveModuleState.optimize(BackRightSwerve, Rotation2d.fromDegrees(MathUtil.inputModulus(m_BackRightTurnEncoder.getPosition(),0 , 360)));
-    //SwerveModuleState FrontLeftOptimized = SwerveModuleState.optimize(FrontLeftSwerve, Rotation2d.fromDegrees(MathUtil.inputModulus(m_FrontLeftTurnEncoder.getPosition(),0 , 360)));
-    //SwerveModuleState FrontRightOptimized = SwerveModuleState.optimize(FrontRightSwerve, Rotation2d.fromDegrees(MathUtil.inputModulus(m_FrontRightTurnEncoder.getPosition(),0 , 360)));
+    SwerveModuleState BackLeftOptimized = SwerveModuleState.optimize(BackLeftSwerve, Rotation2d.fromDegrees(MathUtil.inputModulus(m_BackLeftTurnEncoder.getPosition(),0 , 360)));
+    SwerveModuleState BackRightOptimized = SwerveModuleState.optimize(BackRightSwerve, Rotation2d.fromDegrees(MathUtil.inputModulus(m_BackRightTurnEncoder.getPosition(),0 , 360)));
+    SwerveModuleState FrontLeftOptimized = SwerveModuleState.optimize(FrontLeftSwerve, Rotation2d.fromDegrees(MathUtil.inputModulus(m_FrontLeftTurnEncoder.getPosition(),0 , 360)));
+    SwerveModuleState FrontRightOptimized = SwerveModuleState.optimize(FrontRightSwerve, Rotation2d.fromDegrees(MathUtil.inputModulus(m_FrontRightTurnEncoder.getPosition(),0 , 360)));
    
-    //Optimize Swerve Module States using Instance Method
-    BackLeftSwerve.optimize(Rotation2d.fromDegrees(m_BackLeftTurnEncoder.getPosition()));
-    BackRightSwerve.optimize(Rotation2d.fromDegrees(m_BackRightTurnEncoder.getPosition()));
-    FrontLeftSwerve.optimize(Rotation2d.fromDegrees(m_FrontLeftTurnEncoder.getPosition()));
-    FrontRightSwerve.optimize(Rotation2d.fromDegrees(m_FrontRightTurnEncoder.getPosition()));
-    
     m_gyro.reset();
     
     // display PID coefficients on SmartDashboard
@@ -313,10 +315,14 @@ config_Turn.closedLoop
        * getPosition automatically calls refresh(), no need to manually refresh.
        * 
        * StatusSignalValues also have the toString method implemented, to provide
-       * a useful print of the signal.  Need to use the getValueAsDouble() method 
-       * to convert to double for use in other methods.
+       * a useful print of the signal.
        */
-      
+      /*m_FrontRightTurnEncoder.setPosition(m_FrontRightTurnCancoder.getPosition().getValue() * 360);//might want to add the .waitForUpdate() method to reduce latency?
+      m_FrontLeftTurnEncoder.setPosition(m_FrontLeftTurnCancoder.getPosition().getValue() * 360);
+      m_BackLeftTurnEncoder.setPosition(m_BackLeftTurnCancoder.getPosition().getValue() * 360);
+      m_BackRightTurnEncoder.setPosition(m_BackRightTurnCancoder.getPosition().getValue() * 360);*/
+
+
   }
 
   /** This function is called once each time the robot enters Disabled mode. */
@@ -448,8 +454,8 @@ config_Turn.closedLoop
     if (m_autonomousCommand != null) {
       m_autonomousCommand.cancel();
     }
-    
     m_gyro.reset();
+    //Reinitialize Velocity drive mode for teleop with correct PIDs
     
     maxVel = 4; // m/s linear velocity of drive wheel
     maxYaw = 2*Math.PI;   // max rad/s for chassis rotation rate
@@ -493,7 +499,7 @@ config_Turn.closedLoop
       otherwise Drive is Field Centric
       */
 
-      if(m_controller.getLeftBumperButton()){
+      if(m_controller.getLeftBumper()){
         fieldspeeds =  new ChassisSpeeds(xAxis, yAxis, rot);
       }
       else {
@@ -504,19 +510,10 @@ config_Turn.closedLoop
     SwerveModuleState BackRightSwerve = moduleStates[1];
     SwerveModuleState FrontLeftSwerve = moduleStates[2];
     SwerveModuleState FrontRightSwerve = moduleStates[3];
-    
-    //Optimize Swerve Module States using Deprecated Static Method
-    //var BackLeftOptimized = SwerveModuleState.optimize(BackLeftSwerve, Rotation2d.fromDegrees(m_BackLeftTurnEncoder.getPosition()));
-    //var BackRightOptimized = SwerveModuleState.optimize(BackRightSwerve, Rotation2d.fromDegrees(m_BackRightTurnEncoder.getPosition()));
-    //var FrontLeftOptimized = SwerveModuleState.optimize(FrontLeftSwerve, Rotation2d.fromDegrees(m_FrontLeftTurnEncoder.getPosition()));
-    //var FrontRightOptimized = SwerveModuleState.optimize(FrontRightSwerve, Rotation2d.fromDegrees(m_FrontRightTurnEncoder.getPosition()));
-    
-    //Optimize Swerve Module States using Instance Method
-    BackLeftSwerve.optimize(Rotation2d.fromDegrees(m_BackLeftTurnEncoder.getPosition()));
-    BackRightSwerve.optimize(Rotation2d.fromDegrees(m_BackRightTurnEncoder.getPosition()));
-    FrontLeftSwerve.optimize(Rotation2d.fromDegrees(m_FrontLeftTurnEncoder.getPosition()));
-    FrontRightSwerve.optimize(Rotation2d.fromDegrees(m_FrontRightTurnEncoder.getPosition()));
-    
+    var BackLeftOptimized = SwerveModuleState.optimize(BackLeftSwerve, Rotation2d.fromDegrees(m_BackLeftTurnEncoder.getPosition()));
+    var BackRightOptimized = SwerveModuleState.optimize(BackRightSwerve, Rotation2d.fromDegrees(m_BackRightTurnEncoder.getPosition()));
+    var FrontLeftOptimized = SwerveModuleState.optimize(FrontLeftSwerve, Rotation2d.fromDegrees(m_FrontLeftTurnEncoder.getPosition()));
+    var FrontRightOptimized = SwerveModuleState.optimize(FrontRightSwerve, Rotation2d.fromDegrees(m_FrontRightTurnEncoder.getPosition()));
     /**
      * PIDController objects are commanded to a set point using the 
      * SetReference() method and the reference value of the optimized swerve mfodule states
@@ -535,14 +532,14 @@ config_Turn.closedLoop
     //Set actual motor output values to drive
 
     //angle and SpeedMeter not
-    m_BackRightTurnPID.setReference(BackRightSwerve.angle.getDegrees(), SparkMax.ControlType.kPosition);
-    m_FrontRightTurnPID.setReference(FrontRightSwerve.angle.getDegrees(), SparkMax.ControlType.kPosition);
-    m_FrontLeftTurnPID.setReference(FrontLeftSwerve.angle.getDegrees(), SparkMax.ControlType.kPosition);
-    m_BackLeftTurnPID.setReference(BackLeftSwerve.angle.getDegrees(), SparkMax.ControlType.kPosition);  
-    m_BackLeftDrivePID.setReference(BackLeftSwerve.speedMetersPerSecond, SparkMax.ControlType.kVelocity);
-    m_BackRightDrivePID.setReference(BackRightSwerve.speedMetersPerSecond, SparkMax.ControlType.kVelocity);
-    m_FrontLeftDrivePID.setReference(FrontLeftSwerve.speedMetersPerSecond, SparkMax.ControlType.kVelocity);
-    m_FrontRightDrivePID.setReference(FrontRightSwerve.speedMetersPerSecond, SparkMax.ControlType.kVelocity);
+    m_BackRightTurnPID.setReference(BackRightOptimized.angle.getDegrees(), SparkMax.ControlType.kPosition);
+    m_FrontRightTurnPID.setReference(FrontRightOptimized.angle.getDegrees(), SparkMax.ControlType.kPosition);
+    m_FrontLeftTurnPID.setReference(FrontLeftOptimized.angle.getDegrees(), SparkMax.ControlType.kPosition);
+    m_BackLeftTurnPID.setReference(BackLeftOptimized.angle.getDegrees(), SparkMax.ControlType.kPosition);  
+    m_BackLeftDrivePID.setReference(BackLeftOptimized.speedMetersPerSecond, SparkMax.ControlType.kVelocity);
+    m_BackRightDrivePID.setReference(BackRightOptimized.speedMetersPerSecond, SparkMax.ControlType.kVelocity);
+    m_FrontLeftDrivePID.setReference(FrontLeftOptimized.speedMetersPerSecond, SparkMax.ControlType.kVelocity);
+    m_FrontRightDrivePID.setReference(FrontRightOptimized.speedMetersPerSecond, SparkMax.ControlType.kVelocity);
         
         
     /* //TURN DRIVE MOTORS OFF
@@ -552,7 +549,29 @@ config_Turn.closedLoop
     FrontLeftDrive.set(0);
     */
 
-      //Last years mechanisms 
+   //output the current values to the SmartDashboard, by reading BackLeftDrive and BackLeftTurn
+    //SmartDashboard.putNumber("P Gain", m_BackLeftDrivePID.getP());
+    /*SmartDashboard.putNumber("Set Chassis Speed", Math.sqrt(xAxis*xAxis + yAxis*yAxis));
+    SmartDashboard.putNumber("Set Chassis Angle", Math.atan2(yAxis,xAxis));
+    SmartDashboard.putNumber("BL S_Angle", BackLeftSwerve.angle.getDegrees()); 
+    SmartDashboard.putNumber("BL S_Velocity", BackLeftSwerve.speedMetersPerSecond);
+    SmartDashboard.putNumber("BL P_Angle", m_BackLeftTurnEncoder.getPosition());
+    SmartDashboard.putNumber("BL P_Velocity", m_BackLeftDriveEncoder.getVelocity());
+    SmartDashboard.putNumber("BR S_Angle", BackRightSwerve.angle.getDegrees());
+    SmartDashboard.putNumber("BR S_Velocity", BackRightSwerve.speedMetersPerSecond);
+    SmartDashboard.putNumber("BR P_Angle", m_FrontRightTurnEncoder.getPosition());
+    SmartDashboard.putNumber("BR P_Velocity", m_BackRightDriveEncoder.getVelocity());
+    SmartDashboard.putNumber("FL S_Angle", FrontLeftSwerve.angle.getDegrees());
+    SmartDashboard.putNumber("FL S_Velocity", FrontLeftSwerve.speedMetersPerSecond);
+    SmartDashboard.putNumber("FL P_Angle", m_FrontRightTurnEncoder.getPosition());
+    SmartDashboard.putNumber("FL P_Velocity", m_FrontLeftDriveEncoder.getVelocity());
+    SmartDashboard.putNumber("FR S_Angle", FrontRightSwerve.angle.getDegrees());
+    SmartDashboard.putNumber("FR S_Velocity", FrontRightSwerve.speedMetersPerSecond);
+    SmartDashboard.putNumber("FR P_Angle", m_FrontRightTurnEncoder.getPosition());
+    SmartDashboard.putNumber("FR P_Velocity", m_FrontRightDriveEncoder.getVelocity());
+     */
+
+     //Last years mechanisms 
 
     //Run Intake
     //intakeBot.set((m_controller.getRightTriggerAxis() - m_controller.getLeftTriggerAxis())*0.7);
@@ -587,7 +606,7 @@ config_Turn.closedLoop
     // m_ShooterRightPID.setReference(0, SparkMax.ControlType.kVelocity);
     }
 
-    if(o_controller.getRightBumperButton()){
+    if(o_controller.getRightBumper()){
      // m_ShooterAnglePID.setReference(traplocation, SparkMax.ControlType.kPosition);
     }
     else if(o_controller.getBButton()){
@@ -601,7 +620,7 @@ config_Turn.closedLoop
       m_gyro.reset();
     }
 
-    if(m_controller.getRightBumperButton()){
+    if(m_controller.getRightBumper()){
       maxVel = 1.5;
     }
     else{
